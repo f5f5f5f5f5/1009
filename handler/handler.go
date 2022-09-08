@@ -7,41 +7,47 @@ import (
 )
 
 func home_page(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("1009/templates/home.html", "1009/templates/head.html", "1009/templates/footer.html")
-	if err != nil {
-		log.Fatal(err)
-	}
-	tmpl.ExecuteTemplate(w, "home", nil)
-}
-
-func login_page(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("1009/templates/login.html", "1009/templates/head.html", "1009/templates/footer.html")
-	if err != nil {
-		log.Fatal(err)
-	}
-	tmpl.ExecuteTemplate(w, "login", nil)
-}
-
-func checkin(w http.ResponseWriter, r *http.Request) {
-	login := r.FormValue("login")
-	password := r.FormValue("password")
-	if login == "admin" && password == "admin" {
-		http.Redirect(w, r, "/home/", http.StatusSeeOther)
-	}
-}
-
-func home_TEST(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("1009/templates/hz.html")
+	tmpl, err := template.ParseFiles("templates/home.html")
 	if err != nil {
 		log.Fatal(err)
 	}
 	tmpl.Execute(w, nil)
 }
 
+func login_page(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("templates/login.html")
+	if err != nil {
+		log.Fatal(err)
+	}
+	tmpl.Execute(w, nil)
+}
+
+func checkin(w http.ResponseWriter, r *http.Request) {
+	// login := r.FormValue("login")
+	// password := r.FormValue("password")
+	// if login == "admin" && password == "admin" {
+	// 	http.Redirect(w, r, "/home/", http.StatusSeeOther)
+	// }
+}
+
+func registration_page(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("templates/registration.html")
+	if err != nil {
+		log.Fatal(err)
+	}
+	tmpl.Execute(w, nil)
+}
+
+func register(w http.ResponseWriter, r *http.Request) {
+	// regisretion actions
+}
+
 func HandleRequest() {
 	http.HandleFunc("/", home_page)
-	http.HandleFunc("/home/", home_TEST)
+	http.HandleFunc("/home/", home_page)
 	http.HandleFunc("/login/", login_page)
-	http.HandleFunc("/checkin/", checkin)
+	http.HandleFunc("/checkin/", checkin) // действия с авторизацией
+	http.HandleFunc("/registration/", registration_page)
+	http.HandleFunc("/register/", register) // действия с регистрацией
 	http.ListenAndServe(":5040", nil)
 }
