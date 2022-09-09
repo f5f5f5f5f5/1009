@@ -4,7 +4,10 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"time"
 )
+
+var manager = NewManager("session_id", 60*10)
 
 func home_page(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.ParseFiles("1009/templates/home.html", "1009/templates/head.html", "1009/templates/footer.html")
@@ -26,6 +29,21 @@ func checkin(w http.ResponseWriter, r *http.Request) {
 	login := r.FormValue("login")
 	password := r.FormValue("password")
 	if login == "admin" && password == "admin" {
+		sid := manager.sessionId()
+		session, err := manager.SessionInit(sid)
+		if err != nil {
+			log.Printf("Can not create session: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		session.Login = login
+		session.Created = time.Now()
+		cookie := http.Cookie{
+			HttpOnly: true,
+			Name:     manager.cookieName,
+			Value:    sid,
+		}
+		http.SetCookie(w, &cookie)
 		http.Redirect(w, r, "/home/", http.StatusSeeOther)
 	}
 }
@@ -40,7 +58,7 @@ func home_TEST(w http.ResponseWriter, r *http.Request) {
 
 func HandleRequest() {
 	http.HandleFunc("/", home_page)
-	http.HandleFunc("/home/", home_TEST)
+	http.HandleFunc("/home/", checkAuth(home_TEST))
 	http.HandleFunc("/login/", login_page)
 	http.HandleFunc("/checkin/", checkin)
 	http.ListenAndServe(":5040", nil)
