@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"html/template"
 	"knocker/1009/service"
 	"log"
@@ -8,7 +9,7 @@ import (
 )
 
 func home_page(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("1009/templates/home.html")
+	tmpl, err := template.ParseFiles("templates/home.html")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -16,7 +17,7 @@ func home_page(w http.ResponseWriter, r *http.Request) {
 }
 
 func login_page(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("1009/templates/login.html")
+	tmpl, err := template.ParseFiles("templates/login.html")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -32,7 +33,7 @@ func checkin(w http.ResponseWriter, r *http.Request) {
 }
 
 func registration_page(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("1009/templates/registration.html")
+	tmpl, err := template.ParseFiles("templates/registration.html")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,7 +45,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 }
 
 func newnote_page(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("1009/templates/newnote.html")
+	tmpl, err := template.ParseFiles("templates/newnote.html")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,11 +54,13 @@ func newnote_page(w http.ResponseWriter, r *http.Request) {
 
 func save_note(w http.ResponseWriter, r *http.Request) {
 	var NewNote service.Note
-	// NewNote.Id = 1, 2, 3
-	NewNote.Name = r.FormValue("Name")
-	NewNote.Text = r.FormValue("Text")
-	// NewNote.Access = user id
-	NewNote.Ttl = r.FormValue("Ttl")
+	NewNote.Id = 1
+	NewNote.Name = "Pervaya"
+	NewNote.Text = "Text"
+	NewNote.Access = append(NewNote.Access, 123)
+	NewNote.Ttl = "321"
+	service.NoteRange = append(service.NoteRange, NewNote)
+	fmt.Println(service.NoteRange)
 }
 
 func HandleRequest() {

@@ -92,14 +92,13 @@
   </header>
 
   <main class="px-3">
-    <h1>there you go</h1>
-        {{ range . }}
-        <div>
-            <p>{{ .Name }}</p>
-            <p>{{ .Text }}</p>
-            <p>{{ .Ttl }}</p> 
-        </div>
-        {{ end }}
+    <h1>HIIIIII</h1>
+      <ul>
+        {{range .NoteRange}}
+        <li>{{.Name}}</li>
+        <li>{{.Text}}</li>
+        {{end}}
+</ul>
   </main>
 
   <footer class="mt-auto text-white-50">
