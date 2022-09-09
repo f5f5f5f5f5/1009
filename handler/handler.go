@@ -1,9 +1,11 @@
 package handler
 
 import (
-	"crypto/tls"
+	//"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"knocker/1009/service"
 	"log"
 	"net/http"
@@ -17,6 +19,11 @@ func home_page(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	err = json.NewEncoder(w).Encode(service.NoteRange)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
 	tmpl.Execute(w, nil)
 }
 
@@ -29,9 +36,9 @@ func login_page(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkin(w http.ResponseWriter, r *http.Request) {
-	login := r.FormValue("login")
+	Login := r.FormValue("login")
 	password := r.FormValue("password")
-	if login == "admin" && password == "admin" {
+	if Login == "admin" && password == "admin" {
 		log.Printf("Auth passed")
 		sid := manager.sessionId()
 		session, err := manager.SessionInit(sid)
@@ -40,7 +47,7 @@ func checkin(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		session.Login = login
+		session.Login = Login
 		session.Created = time.Now()
 		cookie := http.Cookie{
 			Name:  manager.cookieName,
@@ -66,7 +73,44 @@ func registration_page(w http.ResponseWriter, r *http.Request) {
 }
 
 func register(w http.ResponseWriter, r *http.Request) {
-	// regisration actions
+	const UsersFilename = "service/Users.json"
+
+	if r.Method == "GET" {
+		http.ServeFile(w, r, "templates/registration.html")
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		log.Printf("Can not parse form Sign Up: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	email := r.FormValue("email")
+	password := r.FormValue("password")
+
+	rawDataIn, err := ioutil.ReadFile(UsersFilename)
+	if err != nil {
+		log.Fatal("Cannot load settings:", err)
+	}
+	var users service.Settings
+	err = json.Unmarshal(rawDataIn, &users)
+	if err != nil {
+		log.Fatal("Invalid settings format:", err)
+	}
+	newUser := service.UserUP{
+		Username: email,
+		Password: password,
+	}
+	users.Users = append(users.Users, newUser)
+	rawDataOut, err := json.MarshalIndent(&users, "", "  ")
+	if err != nil {
+		log.Fatal("JSON marshaling failed:", err)
+	}
+	err = ioutil.WriteFile(UsersFilename, rawDataOut, 0)
+	if err != nil {
+		log.Fatal("Cannot write updated settings file:", err)
+	}
 }
 
 func newnote_page(w http.ResponseWriter, r *http.Request) {
@@ -79,11 +123,11 @@ func newnote_page(w http.ResponseWriter, r *http.Request) {
 
 func save_note(w http.ResponseWriter, r *http.Request) {
 	var NewNote service.Note
-	NewNote.Id = 1
-	NewNote.Name = "Pervaya"
-	NewNote.Text = "Text"
-	NewNote.Access = append(NewNote.Access, 123)
-	NewNote.Ttl = "321"
+	//NewNote.Id = 1
+	NewNote.Name = r.FormValue("Name")
+	NewNote.Text = r.FormValue("Text")
+	//NewNote.Access = append(NewNote.Access, "login")
+	//NewNote.Ttl = r.FormValue("Ttl")
 	service.NoteRange = append(service.NoteRange, NewNote)
 	fmt.Println(service.NoteRange)
 }
@@ -98,16 +142,18 @@ func HandleRequest() {
 	mux.HandleFunc("/checkin/", checkin) // действия с авторизацией
 	mux.HandleFunc("/registration/", registration_page)
 	mux.HandleFunc("/register/", register) // действия с регистрацией
-	srv := &http.Server{
-		Addr:    "localhost:8080",
-		Handler: mux,
-		TLSConfig: &tls.Config{
-			MinVersion:               tls.VersionTLS13,
-			PreferServerCipherSuites: true,
-		},
-	}
-	err := srv.ListenAndServeTLS("1009/key/server.crt", "1009/key/server.key")
-	if err != nil {
-		log.Fatalf("can not listen port 8080: %v", err)
-	}
+	// //srv := &http.Server{
+	// 	Addr:    "localhost:5040",
+	// 	Handler: mux,
+	// 	// TLSConfig: &tls.Config{
+	// 	// 	MinVersion:               tls.VersionTLS13,
+	// 	// 	PreferServerCipherSuites: true,
+	// 	// },
+	// }
+	http.Handle("/", mux)
+	http.ListenAndServe(":5040", nil)
+	// err := srv.ListenAndServeTLS("1009/key/server.crt", "1009/key/server.key")
+	// if err != nil {
+	// 	log.Fatalf("can not listen port 5040: %v", err)
+	// }
 }

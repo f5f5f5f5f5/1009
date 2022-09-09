@@ -1,10 +1,12 @@
 package service
 
-type User struct {
-	Id       int    `json:"Id"`
-	Name     string `json:"Name"`
+type UserUP struct {
 	Username string `json:"Username"`
 	Password string `json:"Password"`
 }
 
-var UserRange []User
+type Settings struct {
+	Users []UserUP
+}
+
+const UsersFilename = "1009/service/Users.json"

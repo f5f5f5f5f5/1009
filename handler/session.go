@@ -73,7 +73,7 @@ func (manager *Manager) SessionGC() {
 	for {
 		time.Sleep(time.Second * time.Duration(manager.maxlifetime))
 		manager.lock.Lock()
-		defer manager.lock.Lock()
+		//defer manager.lock.Lock()
 		for key, value := range manager.storage {
 			if value.Created.Add(time.Second * time.Duration(manager.maxlifetime)).Before(time.Now()) {
 				delete(manager.storage, key)
