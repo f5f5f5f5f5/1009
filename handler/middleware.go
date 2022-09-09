@@ -26,6 +26,7 @@ func checkAuth(handler func(w http.ResponseWriter, r *http.Request)) func(w http
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
+		log.Printf("Middleware auth passed")
 		handler(w, r)
 	}
 }
