@@ -22,12 +22,12 @@ func CheckUP(login, password string) (string, string) {
 
 	rawDataIn, err := ioutil.ReadFile(UsersFilename)
 	if err != nil {
-		log.Fatal("Cannot load settings:", err)
+		log.Printf("Cannot load Users file: %v", err)
 	}
 
 	err = json.Unmarshal(rawDataIn, &vs)
 	if err != nil {
-		log.Fatal("Invalid settings format:", err)
+		log.Printf("Invalid json format: %v", err)
 	}
 
 	for _, value := range vs {

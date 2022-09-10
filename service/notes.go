@@ -1,11 +1,67 @@
 package service
 
+import (
+	"encoding/json"
+	"io/ioutil"
+	"log"
+
+	//"time"
+	"strconv"
+)
+
 type Note struct {
+	UserId string   `json:"UserID"`
 	Id     int      `json:"Id"`
 	Name   string   `json:"Name"`
 	Text   string   `json:"Text"`
 	Access []string `json:"Access"`
-	Ttl    string   `json:"Ttl"`
+	Ttl    int      `json:"Ttl"`
 }
 
-var NoteRange = []Note{}
+func NewNote(userid, name, text, ttl string) {
+	var noteArray []Note
+
+	const NotesFilename = "service/Notes.json"
+
+	rawDataIn, err := ioutil.ReadFile(NotesFilename)
+	if err != nil {
+		log.Printf("Cannot load file: %v", err)
+	}
+
+	err = json.Unmarshal(rawDataIn, &noteArray)
+	if err != nil {
+		log.Printf("Failed to unmarshall with error: %v", err)
+	}
+
+	var accessArray []string
+	accessArray = append(accessArray, userid)
+
+	intttl, err := strconv.Atoi(ttl)
+
+	if err != nil {
+		log.Printf("Failed to convert time: %v", err)
+	}
+
+	newnote := Note{
+		UserId: userid,
+		Id:     len(noteArray), //add another way setting id, it may match when deleted
+		Name:   name,
+		Text:   text,
+		Access: accessArray,
+		Ttl:    intttl,
+	}
+
+	noteArray = append(noteArray, newnote)
+
+	boolVar, err := json.Marshal(noteArray)
+
+	if err != nil {
+		log.Printf("Json marshalling failed: %v", err)
+	}
+
+	err = ioutil.WriteFile(NotesFilename, boolVar, 0)
+
+	if err != nil {
+		log.Printf("Cannot write updated Notes file: %v", err)
+	}
+}

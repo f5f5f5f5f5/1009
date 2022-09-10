@@ -3,7 +3,7 @@ package handler
 import (
 	//"crypto/tls"
 	"encoding/json"
-	"fmt"
+	//"fmt"
 	"html/template"
 	"io/ioutil"
 	"knocker/1009/service"
@@ -36,7 +36,7 @@ func checkin(w http.ResponseWriter, r *http.Request) {
 
 	login, password = service.CheckUP(login, password)
 
-	if (login != "") && (password != "") {
+	if (login != "") && (password != "") { //switch case empty login/password
 		log.Printf("Auth passed")
 		sid := manager.sessionId()
 		session, err := manager.SessionInit(sid)
@@ -102,12 +102,20 @@ func register(w http.ResponseWriter, r *http.Request) {
 
 	rawDataIn, err := ioutil.ReadFile(UsersFilename)
 	if err != nil {
-		log.Fatal("Cannot load settings:", err)
+		log.Printf("Cannot load file: %v", err)
 	}
 
 	err = json.Unmarshal(rawDataIn, &vs)
 	if err != nil {
-		log.Fatal("Invalid settings format:", err)
+		log.Printf("Failer to unmarshall with error: %v", err)
+	}
+
+	for _, value := range vs {
+		if (value.Username) == login {
+			log.Println("This name was already taken")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	vs = append(vs, sv)
@@ -115,13 +123,13 @@ func register(w http.ResponseWriter, r *http.Request) {
 	boolVar, err := json.Marshal(vs)
 
 	if err != nil {
-		log.Fatal("Json marshalling failed:", err)
+		log.Printf("Json marshalling failed: %v", err)
 	}
 
 	err = ioutil.WriteFile(UsersFilename, boolVar, 0)
 
 	if err != nil {
-		log.Fatal("Cannot write updated settings file:", err)
+		log.Printf("Cannot write updated Users file: %v", err)
 	}
 }
 
@@ -134,21 +142,22 @@ func newnote_page(w http.ResponseWriter, r *http.Request) {
 }
 
 func save_note(w http.ResponseWriter, r *http.Request) {
-	var NewNote service.Note
-	//NewNote.Id = 1
-	NewNote.Name = r.FormValue("Name")
-	NewNote.Text = r.FormValue("Text")
-	//NewNote.Access = append(NewNote.Access, "login")
-	//NewNote.Ttl = r.FormValue("Ttl")
-	service.NoteRange = append(service.NoteRange, NewNote)
-	fmt.Println(service.NoteRange)
+	name := r.FormValue("Name")
+	text := r.FormValue("Text")
+	ttl := r.FormValue("Ttl")
+	userid := "Beta"
+	// if err != nil {
+	// 	log.Printf("Failed to get user id from session: %v", err)
+	// }
+	service.NewNote(userid, name, text, ttl)
+	http.Redirect(w, r, "/home/", http.StatusSeeOther)
 }
 
 func HandleRequest() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", home_page)
-	mux.HandleFunc("/home/", checkAuth(home_page))
-	mux.HandleFunc("/newnote/", newnote_page)
+	mux.HandleFunc("/home/", home_page)
+	mux.HandleFunc("/newnote/", checkAuth(newnote_page))
 	mux.HandleFunc("/save_note/", save_note)
 	mux.HandleFunc("/login/", login_page)
 	mux.HandleFunc("/checkin/", checkin) // действия с авторизацией
