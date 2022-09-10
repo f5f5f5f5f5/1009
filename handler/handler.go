@@ -19,11 +19,6 @@ func home_page(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = json.NewEncoder(w).Encode(service.NoteRange)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
 	tmpl.Execute(w, nil)
 }
 
@@ -36,9 +31,12 @@ func login_page(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkin(w http.ResponseWriter, r *http.Request) {
-	Login := r.FormValue("login")
+	login := r.FormValue("login")
 	password := r.FormValue("password")
-	if Login == "admin" && password == "admin" {
+
+	login, password = service.CheckUP(login, password)
+
+	if (login != "") && (password != "") {
 		log.Printf("Auth passed")
 		sid := manager.sessionId()
 		session, err := manager.SessionInit(sid)
@@ -47,7 +45,7 @@ func checkin(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		session.Login = Login
+		session.Login = login
 		session.Created = time.Now()
 		cookie := http.Cookie{
 			Name:  manager.cookieName,
@@ -73,8 +71,6 @@ func registration_page(w http.ResponseWriter, r *http.Request) {
 }
 
 func register(w http.ResponseWriter, r *http.Request) {
-	const UsersFilename = "service/Users.json"
-
 	if r.Method == "GET" {
 		http.ServeFile(w, r, "templates/registration.html")
 		return
@@ -86,28 +82,44 @@ func register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	email := r.FormValue("email")
+	login := r.FormValue("login")
 	password := r.FormValue("password")
+	password1 := r.FormValue("password1")
+
+	if password != password1 {
+		log.Printf("Passwords do not match")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	sv := service.UserUP{
+		Username: login,
+		Password: password,
+	}
+	var vs []service.UserUP
+
+	const UsersFilename = "service/Users.json"
 
 	rawDataIn, err := ioutil.ReadFile(UsersFilename)
 	if err != nil {
 		log.Fatal("Cannot load settings:", err)
 	}
-	var users service.Settings
-	err = json.Unmarshal(rawDataIn, &users)
+
+	err = json.Unmarshal(rawDataIn, &vs)
 	if err != nil {
 		log.Fatal("Invalid settings format:", err)
 	}
-	newUser := service.UserUP{
-		Username: email,
-		Password: password,
-	}
-	users.Users = append(users.Users, newUser)
-	rawDataOut, err := json.MarshalIndent(&users, "", "  ")
+
+	vs = append(vs, sv)
+
+	boolVar, err := json.Marshal(vs)
+
 	if err != nil {
-		log.Fatal("JSON marshaling failed:", err)
+		log.Fatal("Json marshalling failed:", err)
 	}
-	err = ioutil.WriteFile(UsersFilename, rawDataOut, 0)
+
+	err = ioutil.WriteFile(UsersFilename, boolVar, 0)
+
 	if err != nil {
 		log.Fatal("Cannot write updated settings file:", err)
 	}
