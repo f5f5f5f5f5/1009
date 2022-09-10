@@ -15,19 +15,56 @@ import (
 var manager = NewManager("session_id", 60*10)
 
 func home_page(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("templates/home.html")
+	tmpl, err := template.ParseFiles("templates/home.html", "templates/top.html", "templates/bot.html")
 	if err != nil {
 		log.Fatal(err)
 	}
-	tmpl.Execute(w, nil)
+
+	var allNotes []service.Note
+
+	const UsersFilename = "service/Notes.json"
+
+	rawDataIn, err := ioutil.ReadFile(UsersFilename)
+	if err != nil {
+		log.Printf("Cannot load file: %v", err)
+	}
+
+	err = json.Unmarshal(rawDataIn, &allNotes)
+	if err != nil {
+		log.Printf("Failer to unmarshall with error: %v", err)
+	}
+
+	var homeNotes []service.Note
+
+	currentCookie, err := r.Cookie(manager.cookieName)
+	if err != nil {
+		log.Printf("Failed to get current cookie from cookie name: %v", err)
+	}
+	sid := currentCookie.Value
+	currentSession, err := manager.SessionRead(sid)
+	if err != nil {
+		log.Printf("Failed to get user id from session: %v", err)
+	}
+
+	userid := currentSession.Login
+
+	for _, value := range allNotes {
+		for _, valeu := range value.Access {
+			if valeu == userid {
+				homeNotes = append(homeNotes, value)
+			}
+		}
+	}
+
+	tmpl.ExecuteTemplate(w, "home", homeNotes)
 }
 
 func login_page(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("templates/login.html")
+	tmpl, err := template.ParseFiles("templates/login.html", "templates/top.html", "templates/bot.html")
 	if err != nil {
 		log.Fatal(err)
 	}
-	tmpl.Execute(w, nil)
+	tmpl.ExecuteTemplate(w, "login", nil)
 }
 
 func checkin(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +73,11 @@ func checkin(w http.ResponseWriter, r *http.Request) {
 
 	login, password = service.CheckUP(login, password)
 
-	if (login != "") && (password != "") { //switch case empty login/password
+	if (login == "") || (password == "") {
+		log.Printf("Auth failed")
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	} else {
 		log.Printf("Auth passed")
 		sid := manager.sessionId()
 		session, err := manager.SessionInit(sid)
@@ -55,19 +96,15 @@ func checkin(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Create cookie: %+v", cookie)
 		http.SetCookie(w, &cookie)
 		http.Redirect(w, r, "/home", http.StatusSeeOther)
-	} else {
-		log.Printf("Auth failed")
-		w.WriteHeader(http.StatusUnauthorized)
-		return
 	}
 }
 
 func registration_page(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("templates/registration.html")
+	tmpl, err := template.ParseFiles("templates/registration.html", "templates/top.html", "templates/bot.html")
 	if err != nil {
 		log.Fatal(err)
 	}
-	tmpl.Execute(w, nil)
+	tmpl.ExecuteTemplate(w, "registration", nil)
 }
 
 func register(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +144,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 
 	err = json.Unmarshal(rawDataIn, &vs)
 	if err != nil {
-		log.Printf("Failer to unmarshall with error: %v", err)
+		log.Printf("Failed to unmarshall with error: %v", err)
 	}
 
 	for _, value := range vs {
@@ -134,23 +171,40 @@ func register(w http.ResponseWriter, r *http.Request) {
 }
 
 func newnote_page(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("templates/newnote.html")
+	tmpl, err := template.ParseFiles("templates/newnote.html", "templates/top.html", "templates/bot.html")
 	if err != nil {
 		log.Fatal(err)
 	}
-	tmpl.Execute(w, nil)
+	tmpl.ExecuteTemplate(w, "newnote", nil)
 }
 
 func save_note(w http.ResponseWriter, r *http.Request) {
 	name := r.FormValue("Name")
 	text := r.FormValue("Text")
 	ttl := r.FormValue("Ttl")
-	userid := "Beta"
-	// if err != nil {
-	// 	log.Printf("Failed to get user id from session: %v", err)
-	// }
+
+	currentCookie, err := r.Cookie(manager.cookieName)
+	if err != nil {
+		log.Printf("Failed to get current cookie from cookie name: %v", err)
+	}
+	sid := currentCookie.Value
+	currentSession, err := manager.SessionRead(sid)
+	if err != nil {
+		log.Printf("Failed to get user id from session: %v", err)
+	}
+
+	userid := currentSession.Login
+
 	service.NewNote(userid, name, text, ttl)
 	http.Redirect(w, r, "/home/", http.StatusSeeOther)
+}
+
+func editNote_page(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("templates/editnote.html", "templates/top.html", "templates/bot.html")
+	if err != nil {
+		log.Fatal(err)
+	}
+	tmpl.ExecuteTemplate(w, "editnote", nil)
 }
 
 func HandleRequest() {
@@ -163,6 +217,7 @@ func HandleRequest() {
 	mux.HandleFunc("/checkin/", checkin) // действия с авторизацией
 	mux.HandleFunc("/registration/", registration_page)
 	mux.HandleFunc("/register/", register) // действия с регистрацией
+	mux.HandleFunc("/editnote", checkAuth(editNote_page))
 	// //srv := &http.Server{
 	// 	Addr:    "localhost:5040",
 	// 	Handler: mux,

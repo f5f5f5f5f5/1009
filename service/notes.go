@@ -10,8 +10,8 @@ import (
 )
 
 type Note struct {
-	UserId string   `json:"UserID"`
-	Id     int      `json:"Id"`
+	UserId string `json:"UserID"`
+	//	Id     int      `json:"Id"`
 	Name   string   `json:"Name"`
 	Text   string   `json:"Text"`
 	Access []string `json:"Access"`
@@ -44,7 +44,7 @@ func NewNote(userid, name, text, ttl string) {
 
 	newnote := Note{
 		UserId: userid,
-		Id:     len(noteArray), //add another way setting id, it may match when deleted
+		//	Id:     len(noteArray), //add another way setting id, it may match when deleted
 		Name:   name,
 		Text:   text,
 		Access: accessArray,
@@ -65,3 +65,7 @@ func NewNote(userid, name, text, ttl string) {
 		log.Printf("Cannot write updated Notes file: %v", err)
 	}
 }
+
+// CheckTtl
+// EditNote
+// DeleteNote
