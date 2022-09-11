@@ -1,1 +1,1 @@
-[{"UserID":"Gamma","Name":"Кино","Text":"Я пойду в кино завтра вечером, надо позвать друзей","Access":["Gamma"],"Ttl":24}]
+[{"UserID":"Gamma","Id":0,"Name":"Кино","Text":"Я пойду в кино завтра вечером, надо позвать друзей","Access":["Gamma"],"Ttl":24},{"UserID":"Alex","Id":0,"Name":"Cinema","Text":"I want to visit cinema tomorrow","Access":["Alex"],"Ttl":48},{"UserID":"Gamma","Id":1,"Name":"Пойду в кино","Text":"Кино завтра вечером","Access":["Gamma"],"Ttl":12},{"UserID":"Gamma","Id":2,"Name":"Ресторан","Text":"Я пойду в ресторан в воскресенье","Access":["Gamma"],"Ttl":124}]

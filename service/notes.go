@@ -10,13 +10,15 @@ import (
 )
 
 type Note struct {
-	UserId string `json:"UserID"`
-	//	Id     int      `json:"Id"`
+	UserId string   `json:"UserID"`
+	Id     int      `json:"Id"`
 	Name   string   `json:"Name"`
 	Text   string   `json:"Text"`
 	Access []string `json:"Access"`
 	Ttl    int      `json:"Ttl"`
 }
+
+var id int = 0
 
 func NewNote(userid, name, text, ttl string) {
 	var noteArray []Note
@@ -42,9 +44,13 @@ func NewNote(userid, name, text, ttl string) {
 		log.Printf("Failed to convert time: %v", err)
 	}
 
+	var idPointer *int = &id
+	//it doesnt work
+	*idPointer = *idPointer + 1
+
 	newnote := Note{
 		UserId: userid,
-		//	Id:     len(noteArray), //add another way setting id, it may match when deleted
+		Id:     *idPointer, //add another way setting id, it may match when deleted; add time of creation to delete when ttl expires
 		Name:   name,
 		Text:   text,
 		Access: accessArray,

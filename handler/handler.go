@@ -3,12 +3,12 @@ package handler
 import (
 	//"crypto/tls"
 	"encoding/json"
-	//"fmt"
 	"html/template"
 	"io/ioutil"
 	"knocker/1009/service"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -31,7 +31,7 @@ func home_page(w http.ResponseWriter, r *http.Request) {
 
 	err = json.Unmarshal(rawDataIn, &allNotes)
 	if err != nil {
-		log.Printf("Failer to unmarshall with error: %v", err)
+		log.Printf("Failed to unmarshall with error: %v", err)
 	}
 
 	var homeNotes []service.Note
@@ -95,7 +95,7 @@ func checkin(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("Create cookie: %+v", cookie)
 		http.SetCookie(w, &cookie)
-		http.Redirect(w, r, "/home", http.StatusSeeOther)
+		http.Redirect(w, r, "/home/", http.StatusSeeOther)
 	}
 }
 
@@ -140,11 +140,15 @@ func register(w http.ResponseWriter, r *http.Request) {
 	rawDataIn, err := ioutil.ReadFile(UsersFilename)
 	if err != nil {
 		log.Printf("Cannot load file: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	err = json.Unmarshal(rawDataIn, &vs)
 	if err != nil {
 		log.Printf("Failed to unmarshall with error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	for _, value := range vs {
@@ -161,13 +165,19 @@ func register(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Printf("Json marshalling failed: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	err = ioutil.WriteFile(UsersFilename, boolVar, 0)
 
 	if err != nil {
 		log.Printf("Cannot write updated Users file: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
+
+	http.Redirect(w, r, "/home/", http.StatusSeeOther)
 }
 
 func newnote_page(w http.ResponseWriter, r *http.Request) {
@@ -199,16 +209,177 @@ func save_note(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/home/", http.StatusSeeOther)
 }
 
+func editNote(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	strId := r.PostForm["Id"][0]
+	name := r.PostForm["Name"][0]
+	text := r.PostForm["Text"][0]
+	strTtl := r.PostForm["Ttl"][0]
+
+	id, err := strconv.Atoi(strId)
+	if err != nil {
+		log.Printf("Failed to convert id to int: %v", err)
+	}
+
+	ttl, err := strconv.Atoi(strTtl)
+	if err != nil {
+		log.Printf("Failed to convert ttl to int: %v", err)
+	}
+
+	var allNotes []service.Note
+
+	const notesFilename = "service/Notes.json"
+
+	rawDataIn, err := ioutil.ReadFile(notesFilename)
+	if err != nil {
+		log.Printf("Cannot load file: %v", err)
+	}
+
+	err = json.Unmarshal(rawDataIn, &allNotes)
+	if err != nil {
+		log.Printf("Failed to unmarshall with error: %v", err)
+	}
+
+	currentCookie, err := r.Cookie(manager.cookieName)
+	if err != nil {
+		log.Printf("Failed to get current cookie from cookie name: %v", err)
+	}
+
+	sid := currentCookie.Value
+
+	currentSession, err := manager.SessionRead(sid)
+	if err != nil {
+		log.Printf("Failed to get user id from session: %v", err)
+	}
+
+	userid := currentSession.Login
+
+	for i, value := range allNotes {
+		if value.Id == id {
+			log.Print("got a match of IDs")
+			if value.UserId == userid {
+				log.Print("got a match of UserIds")
+				value.Name = name
+				value.Text = text
+				value.Ttl = ttl
+				allNotes[i] = value
+				log.Print(allNotes)
+			} else {
+				log.Printf("Note UserId and current session UserId do not match, current user: %s, note userid: %s", userid, value.UserId)
+				return
+			}
+		} else {
+			log.Print("There is no note with given Id")
+		}
+	}
+
+	boolVar, err := json.Marshal(allNotes)
+
+	if err != nil {
+		log.Printf("Json marshalling failed: %v", err)
+	}
+
+	err = ioutil.WriteFile(notesFilename, boolVar, 0)
+
+	if err != nil {
+		log.Printf("Cannot write updated Notes file: %v", err)
+	}
+
+	http.Redirect(w, r, "/yournotes/", http.StatusSeeOther)
+}
+
 func editNote_page(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.ParseFiles("templates/editnote.html", "templates/top.html", "templates/bot.html")
 	if err != nil {
 		log.Fatal(err)
 	}
-	tmpl.ExecuteTemplate(w, "editnote", nil)
+
+	var allNotes []service.Note
+
+	const notesFilename = "service/Notes.json"
+
+	rawDataIn, err := ioutil.ReadFile(notesFilename)
+	if err != nil {
+		log.Printf("Cannot load file: %v", err)
+	}
+
+	err = json.Unmarshal(rawDataIn, &allNotes)
+	if err != nil {
+		log.Printf("Failed to unmarshall with error: %v", err)
+	}
+
+	var userNotes []service.Note
+
+	currentCookie, err := r.Cookie(manager.cookieName)
+	if err != nil {
+		log.Printf("Failed to get current cookie from cookie name: %v", err)
+	}
+
+	sid := currentCookie.Value
+
+	currentSession, err := manager.SessionRead(sid)
+	if err != nil {
+		log.Printf("Failed to get user id from session: %v", err)
+	}
+
+	userid := currentSession.Login
+
+	for _, value := range allNotes {
+		for _, valeu := range value.Access {
+			if valeu == userid {
+				userNotes = append(userNotes, value)
+			}
+		}
+	}
+
+	tmpl.ExecuteTemplate(w, "editnote", userNotes)
 }
 
 // func deleteNote(w http.ResponseWriter, r *http.Request) {
-//
+// 	r.ParseForm()
+// 	strId := r.PostForm["Id"][0]
+
+// 	id, err := strconv.Atoi(strId)
+// 	if err != nil {
+// 		log.Printf("Failed to convert id to int: %v", err)
+// 	}
+
+// 	var allNotes []service.Note
+
+// 	const notesFilename = "service/Notes.json"
+
+// 	rawDataIn, err := ioutil.ReadFile(notesFilename)
+// 	if err != nil {
+// 		log.Printf("Cannot load file: %v", err)
+// 	}
+
+// 	err = json.Unmarshal(rawDataIn, &allNotes)
+// 	if err != nil {
+// 		log.Printf("Failed to unmarshall with error: %v", err)
+// 	}
+
+// 	currentCookie, err := r.Cookie(manager.cookieName)
+// 	if err != nil {
+// 		log.Printf("Failed to get current cookie from cookie name: %v", err)
+// 	}
+
+// 	sid := currentCookie.Value
+
+// 	currentSession, err := manager.SessionRead(sid)
+// 	if err != nil {
+// 		log.Printf("Failed to get user id from session: %v", err)
+// 	}
+
+// 	userid := currentSession.Login
+
+// 	for i, value := range allNotes {
+// 		if value.Id == id {
+// 			if value.UserId == userid {
+// 				copy(allNotes[i:], allNotes[i+1:])
+// 				allNotes[len(allNotes)-1] = nil
+// 			}
+// 		}
+// 	}
 // }
 
 func HandleRequest() {
@@ -221,8 +392,9 @@ func HandleRequest() {
 	mux.HandleFunc("/checkin/", checkin) // действия с авторизацией
 	mux.HandleFunc("/registration/", registration_page)
 	mux.HandleFunc("/register/", register) // действия с регистрацией
-	mux.HandleFunc("/editnote", checkAuth(editNote_page))
-	//mux.HandleFunc("/delete", deleteNote)
+	mux.HandleFunc("/yournotes/", editNote_page)
+	mux.HandleFunc("/edit/", editNote)
+	//	mux.HandleFunc("/delete/", deleteNote)
 	http.Handle("/", mux)
 	http.ListenAndServe(":5040", nil)
 }

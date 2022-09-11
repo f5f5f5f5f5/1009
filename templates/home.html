@@ -11,7 +11,7 @@
         <a class="nav-link fw-bold py-1 px-0" href="/newnote/">Add note</a>
         <a class="nav-link fw-bold py-1 px-0" href="/login/">Sign in</a>
         <a class="nav-link fw-bold py-1 px-0" href="/registration/">Sign up</a>
-        <a class="nav-link fw-bold py-1 px-0" href="/editnote/">Edit your notes</a>
+        <a class="nav-link fw-bold py-1 px-0" href="/yournotes/">Edit your notes</a>
       </nav>
     </div>
   </header>
@@ -24,9 +24,6 @@
           <h3> {{ .UserId }} `s note: {{ .Name }}</h3>
           <h4> {{ .Text }}</h4>
           <b>This note will be here for {{ .Ttl }} more hours</b>
-          <td><a href="/edit/{{.Name}}">Изменить</a> |
-              <a href="/delete/{{.Name}}">Удалить</a>
-        </td>
         {{end}}
       </ul>
   </main>
