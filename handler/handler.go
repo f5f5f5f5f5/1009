@@ -207,6 +207,10 @@ func editNote_page(w http.ResponseWriter, r *http.Request) {
 	tmpl.ExecuteTemplate(w, "editnote", nil)
 }
 
+// func deleteNote(w http.ResponseWriter, r *http.Request) {
+//
+// }
+
 func HandleRequest() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", home_page)
@@ -218,18 +222,7 @@ func HandleRequest() {
 	mux.HandleFunc("/registration/", registration_page)
 	mux.HandleFunc("/register/", register) // действия с регистрацией
 	mux.HandleFunc("/editnote", checkAuth(editNote_page))
-	// //srv := &http.Server{
-	// 	Addr:    "localhost:5040",
-	// 	Handler: mux,
-	// 	// TLSConfig: &tls.Config{
-	// 	// 	MinVersion:               tls.VersionTLS13,
-	// 	// 	PreferServerCipherSuites: true,
-	// 	// },
-	// }
+	//mux.HandleFunc("/delete", deleteNote)
 	http.Handle("/", mux)
 	http.ListenAndServe(":5040", nil)
-	// err := srv.ListenAndServeTLS("1009/key/server.crt", "1009/key/server.key")
-	// if err != nil {
-	// 	log.Fatalf("can not listen port 5040: %v", err)
-	// }
 }

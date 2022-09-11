@@ -24,9 +24,9 @@
           <h3> {{ .UserId }} `s note: {{ .Name }}</h3>
           <h4> {{ .Text }}</h4>
           <b>This note will be here for {{ .Ttl }} more hours</b>
-          <form action="/editnote/" method="get">
-            <button class="btn btn-light">Edit or delete note</button>
-          </form>
+          <td><a href="/edit/{{.Name}}">Изменить</a> |
+              <a href="/delete/{{.Name}}">Удалить</a>
+        </td>
         {{end}}
       </ul>
   </main>
