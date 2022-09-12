@@ -72,6 +72,9 @@ func NewNote(userid, name, text, ttl string) {
 	}
 }
 
-// CheckTtl
-// EditNote
-// DeleteNote
+// // This filed named notes so I will store my notes here
+
+// CheckTtl need goroutine scans note date of creation (should be added), compares it to current time and edits ttl, once ttl == 0, deletes note
+// Add new method of setting ID to the note
+// Sort functions to right folders
+// Provide possibility of sorting notes

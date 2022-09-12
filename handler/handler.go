@@ -40,6 +40,7 @@ func home_page(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Failed to get current cookie from cookie name: %v", err)
 	}
+
 	sid := currentCookie.Value
 	currentSession, err := manager.SessionRead(sid)
 	if err != nil {
@@ -68,6 +69,12 @@ func login_page(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkin(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method == "GET" {
+		http.ServeFile(w, r, "templates/login.html")
+		return
+	}
+
 	login := r.FormValue("login")
 	password := r.FormValue("password")
 
@@ -189,6 +196,11 @@ func newnote_page(w http.ResponseWriter, r *http.Request) {
 }
 
 func save_note(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		http.ServeFile(w, r, "templates/login.html")
+		return
+	}
+
 	name := r.FormValue("Name")
 	text := r.FormValue("Text")
 	ttl := r.FormValue("Ttl")
@@ -210,6 +222,12 @@ func save_note(w http.ResponseWriter, r *http.Request) {
 }
 
 func editNote(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method == "GET" {
+		http.ServeFile(w, r, "templates/login.html")
+		return
+	}
+
 	r.ParseForm()
 	strId := r.PostForm["Id"][0]
 	name := r.PostForm["Name"][0]
@@ -335,52 +353,76 @@ func editNote_page(w http.ResponseWriter, r *http.Request) {
 	tmpl.ExecuteTemplate(w, "editnote", userNotes)
 }
 
-// func deleteNote(w http.ResponseWriter, r *http.Request) {
-// 	r.ParseForm()
-// 	strId := r.PostForm["Id"][0]
+func deleteNote(w http.ResponseWriter, r *http.Request) {
 
-// 	id, err := strconv.Atoi(strId)
-// 	if err != nil {
-// 		log.Printf("Failed to convert id to int: %v", err)
-// 	}
+	if r.Method == "GET" {
+		http.ServeFile(w, r, "templates/login.html")
+		return
+	}
 
-// 	var allNotes []service.Note
+	r.ParseForm()
+	strId := r.PostForm["Id"][0]
 
-// 	const notesFilename = "service/Notes.json"
+	id, err := strconv.Atoi(strId)
+	if err != nil {
+		log.Printf("Failed to convert id to int: %v", err)
+	}
 
-// 	rawDataIn, err := ioutil.ReadFile(notesFilename)
-// 	if err != nil {
-// 		log.Printf("Cannot load file: %v", err)
-// 	}
+	var allNotes []service.Note
 
-// 	err = json.Unmarshal(rawDataIn, &allNotes)
-// 	if err != nil {
-// 		log.Printf("Failed to unmarshall with error: %v", err)
-// 	}
+	const notesFilename = "service/Notes.json"
 
-// 	currentCookie, err := r.Cookie(manager.cookieName)
-// 	if err != nil {
-// 		log.Printf("Failed to get current cookie from cookie name: %v", err)
-// 	}
+	rawDataIn, err := ioutil.ReadFile(notesFilename)
+	if err != nil {
+		log.Printf("Cannot load file: %v", err)
+	}
 
-// 	sid := currentCookie.Value
+	err = json.Unmarshal(rawDataIn, &allNotes)
+	if err != nil {
+		log.Printf("Failed to unmarshall with error: %v", err)
+	}
 
-// 	currentSession, err := manager.SessionRead(sid)
-// 	if err != nil {
-// 		log.Printf("Failed to get user id from session: %v", err)
-// 	}
+	currentCookie, err := r.Cookie(manager.cookieName)
+	if err != nil {
+		log.Printf("Failed to get current cookie from cookie name: %v", err)
+	}
 
-// 	userid := currentSession.Login
+	sid := currentCookie.Value
 
-// 	for i, value := range allNotes {
-// 		if value.Id == id {
-// 			if value.UserId == userid {
-// 				copy(allNotes[i:], allNotes[i+1:])
-// 				allNotes[len(allNotes)-1] = nil
-// 			}
-// 		}
-// 	}
-// }
+	currentSession, err := manager.SessionRead(sid)
+	if err != nil {
+		log.Printf("Failed to get user id from session: %v", err)
+	}
+
+	userid := currentSession.Login
+
+	for i, value := range allNotes {
+		if value.Id == id {
+			if value.UserId == userid {
+				allNotes = removeByIndex(allNotes, i)
+			}
+		}
+	}
+
+	boolVar, err := json.Marshal(allNotes)
+
+	if err != nil {
+		log.Printf("Json marshalling failed: %v", err)
+	}
+
+	err = ioutil.WriteFile(notesFilename, boolVar, 0)
+
+	if err != nil {
+		log.Printf("Cannot write updated Notes file: %v", err)
+	}
+
+	http.Redirect(w, r, "/yournotes/", http.StatusSeeOther)
+
+}
+
+func removeByIndex(array []service.Note, index int) []service.Note {
+	return append(array[:index], array[index+1:]...)
+}
 
 func HandleRequest() {
 	mux := http.NewServeMux()
@@ -394,7 +436,7 @@ func HandleRequest() {
 	mux.HandleFunc("/register/", register) // действия с регистрацией
 	mux.HandleFunc("/yournotes/", editNote_page)
 	mux.HandleFunc("/edit/", editNote)
-	//	mux.HandleFunc("/delete/", deleteNote)
+	mux.HandleFunc("/delete/", deleteNote)
 	http.Handle("/", mux)
 	http.ListenAndServe(":5040", nil)
 }
