@@ -56,11 +56,16 @@ func checkAuth(handler func(w http.ResponseWriter, r *http.Request)) func(w http
 }
 ```
 
+##### **Editing and deleting notes**
+Theese functions allow user to edit/delete his own notes. It works with JSON. Finds needed note by note Id, checks is this note belongs to a current user and edit/delete it.
+Im very sorry for my front-end skills, Im really bad at it :)
+
+
 ## Work is still in progress on
 
-##### **Editing and deleting notes**
-
 ##### **Deleting note once its time is up**
+
+##### **Notes sorting**
 
 
 
