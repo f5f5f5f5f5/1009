@@ -20,12 +20,12 @@ type Note struct {
 
 var id int = 0
 
+const notesFilename = "service/Notes.json"
+
 func NewNote(userid, name, text, ttl string) {
 	var noteArray []Note
 
-	const NotesFilename = "service/Notes.json"
-
-	rawDataIn, err := ioutil.ReadFile(NotesFilename)
+	rawDataIn, err := ioutil.ReadFile(notesFilename)
 	if err != nil {
 		log.Printf("Cannot load file: %v", err)
 	}
@@ -50,7 +50,7 @@ func NewNote(userid, name, text, ttl string) {
 
 	newnote := Note{
 		UserId: userid,
-		Id:     *idPointer, //add another way setting id, it may match when deleted; add time of creation to delete when ttl expires
+		Id:     *idPointer, //add another way setting id; add time of creation to delete when ttl expires
 		Name:   name,
 		Text:   text,
 		Access: accessArray,
@@ -65,11 +65,95 @@ func NewNote(userid, name, text, ttl string) {
 		log.Printf("Json marshalling failed: %v", err)
 	}
 
-	err = ioutil.WriteFile(NotesFilename, boolVar, 0)
+	err = ioutil.WriteFile(notesFilename, boolVar, 0)
 
 	if err != nil {
 		log.Printf("Cannot write updated Notes file: %v", err)
 	}
+}
+
+func DeleteNote(id int, userid string) {
+	var allNotes []Note
+
+	rawDataIn, err := ioutil.ReadFile(notesFilename)
+	if err != nil {
+		log.Printf("Cannot load file: %v", err)
+	}
+
+	err = json.Unmarshal(rawDataIn, &allNotes)
+	if err != nil {
+		log.Printf("Failed to unmarshall with error: %v", err)
+	}
+
+	for i, value := range allNotes {
+		if value.Id == id {
+			if value.UserId == userid {
+				allNotes = removeByIndex(allNotes, i)
+			}
+		}
+	}
+
+	boolVar, err := json.Marshal(allNotes)
+
+	if err != nil {
+		log.Printf("Json marshalling failed: %v", err)
+	}
+
+	err = ioutil.WriteFile(notesFilename, boolVar, 0)
+
+	if err != nil {
+		log.Printf("Cannot write updated Notes file: %v", err)
+	}
+
+}
+
+func EditNote(name, text, userid string, id, ttl int) {
+	var allNotes []Note
+
+	rawDataIn, err := ioutil.ReadFile(notesFilename)
+	if err != nil {
+		log.Printf("Cannot load file: %v", err)
+	}
+
+	err = json.Unmarshal(rawDataIn, &allNotes)
+	if err != nil {
+		log.Printf("Failed to unmarshall with error: %v", err)
+	}
+
+	for i, value := range allNotes {
+		if value.Id == id {
+			log.Print("got a match of IDs")
+			if value.UserId == userid {
+				log.Print("got a match of UserIds")
+				value.Name = name
+				value.Text = text
+				value.Ttl = ttl
+				allNotes[i] = value
+				log.Print(allNotes)
+			} else {
+				log.Printf("Note UserId and current session UserId do not match, current user: %s, note userid: %s", userid, value.UserId)
+				return
+			}
+		} else {
+			log.Print("There is no note with given Id")
+		}
+	}
+
+	boolVar, err := json.Marshal(allNotes)
+
+	if err != nil {
+		log.Printf("Json marshalling failed: %v", err)
+	}
+
+	err = ioutil.WriteFile(notesFilename, boolVar, 0)
+
+	if err != nil {
+		log.Printf("Cannot write updated Notes file: %v", err)
+	}
+}
+
+func removeByIndex(array []Note, index int) []Note {
+	return append(array[:index], array[index+1:]...)
 }
 
 // // This filed named notes so I will store my notes here

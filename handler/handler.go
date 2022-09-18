@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 var manager = NewManager("session_id", 60*10)
@@ -223,16 +225,14 @@ func save_note(w http.ResponseWriter, r *http.Request) {
 
 func editNote(w http.ResponseWriter, r *http.Request) {
 
-	if r.Method == "GET" {
-		http.ServeFile(w, r, "templates/login.html")
-		return
+	err := r.ParseForm()
+	if err != nil {
+		log.Println(err)
 	}
-
-	r.ParseForm()
-	strId := r.PostForm["Id"][0]
-	name := r.PostForm["Name"][0]
-	text := r.PostForm["Text"][0]
-	strTtl := r.PostForm["Ttl"][0]
+	strId := r.FormValue("Id")
+	name := r.FormValue("Name")
+	text := r.FormValue("Text")
+	strTtl := r.FormValue("Ttl")
 
 	id, err := strconv.Atoi(strId)
 	if err != nil {
@@ -242,20 +242,6 @@ func editNote(w http.ResponseWriter, r *http.Request) {
 	ttl, err := strconv.Atoi(strTtl)
 	if err != nil {
 		log.Printf("Failed to convert ttl to int: %v", err)
-	}
-
-	var allNotes []service.Note
-
-	const notesFilename = "service/Notes.json"
-
-	rawDataIn, err := ioutil.ReadFile(notesFilename)
-	if err != nil {
-		log.Printf("Cannot load file: %v", err)
-	}
-
-	err = json.Unmarshal(rawDataIn, &allNotes)
-	if err != nil {
-		log.Printf("Failed to unmarshall with error: %v", err)
 	}
 
 	currentCookie, err := r.Cookie(manager.cookieName)
@@ -272,42 +258,13 @@ func editNote(w http.ResponseWriter, r *http.Request) {
 
 	userid := currentSession.Login
 
-	for i, value := range allNotes {
-		if value.Id == id {
-			log.Print("got a match of IDs")
-			if value.UserId == userid {
-				log.Print("got a match of UserIds")
-				value.Name = name
-				value.Text = text
-				value.Ttl = ttl
-				allNotes[i] = value
-				log.Print(allNotes)
-			} else {
-				log.Printf("Note UserId and current session UserId do not match, current user: %s, note userid: %s", userid, value.UserId)
-				return
-			}
-		} else {
-			log.Print("There is no note with given Id")
-		}
-	}
-
-	boolVar, err := json.Marshal(allNotes)
-
-	if err != nil {
-		log.Printf("Json marshalling failed: %v", err)
-	}
-
-	err = ioutil.WriteFile(notesFilename, boolVar, 0)
-
-	if err != nil {
-		log.Printf("Cannot write updated Notes file: %v", err)
-	}
+	service.EditNote(name, text, userid, id, ttl)
 
 	http.Redirect(w, r, "/yournotes/", http.StatusSeeOther)
 }
 
-func editNote_page(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("templates/editnote.html", "templates/top.html", "templates/bot.html")
+func userNotes_page(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("templates/usernotes.html", "templates/top.html", "templates/bot.html")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -350,22 +307,17 @@ func editNote_page(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tmpl.ExecuteTemplate(w, "editnote", userNotes)
+	tmpl.ExecuteTemplate(w, "usernotes", userNotes)
 }
 
-func deleteNote(w http.ResponseWriter, r *http.Request) {
+func editNote_page(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	strid := vars["Id"]
 
-	if r.Method == "GET" {
-		http.ServeFile(w, r, "templates/login.html")
-		return
-	}
+	id, err := strconv.Atoi(strid)
 
-	r.ParseForm()
-	strId := r.PostForm["Id"][0]
-
-	id, err := strconv.Atoi(strId)
 	if err != nil {
-		log.Printf("Failed to convert id to int: %v", err)
+		log.Print("Failed to convert id to int: editNote_page")
 	}
 
 	var allNotes []service.Note
@@ -382,6 +334,34 @@ func deleteNote(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Failed to unmarshall with error: %v", err)
 	}
 
+	noteToEdit := service.Note{}
+
+	for _, value := range allNotes {
+		if id == value.Id {
+			noteToEdit = value
+		}
+	}
+	log.Print(noteToEdit)
+
+	tmpl, err := template.ParseFiles("templates/editnote.html", "templates/top.html", "templates/bot.html")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tmpl.ExecuteTemplate(w, "editnote", noteToEdit)
+
+}
+
+func deleteNote(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+	strid := vars["Id"]
+
+	id, err := strconv.Atoi(strid)
+	if err != nil {
+		log.Printf("Failed to convert id to int: %v", err)
+	}
+
 	currentCookie, err := r.Cookie(manager.cookieName)
 	if err != nil {
 		log.Printf("Failed to get current cookie from cookie name: %v", err)
@@ -396,47 +376,25 @@ func deleteNote(w http.ResponseWriter, r *http.Request) {
 
 	userid := currentSession.Login
 
-	for i, value := range allNotes {
-		if value.Id == id {
-			if value.UserId == userid {
-				allNotes = removeByIndex(allNotes, i)
-			}
-		}
-	}
-
-	boolVar, err := json.Marshal(allNotes)
-
-	if err != nil {
-		log.Printf("Json marshalling failed: %v", err)
-	}
-
-	err = ioutil.WriteFile(notesFilename, boolVar, 0)
-
-	if err != nil {
-		log.Printf("Cannot write updated Notes file: %v", err)
-	}
+	service.DeleteNote(id, userid)
 
 	http.Redirect(w, r, "/yournotes/", http.StatusSeeOther)
-
-}
-
-func removeByIndex(array []service.Note, index int) []service.Note {
-	return append(array[:index], array[index+1:]...)
 }
 
 func HandleRequest() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", home_page)
-	mux.HandleFunc("/home/", home_page)
-	mux.HandleFunc("/newnote/", checkAuth(newnote_page))
-	mux.HandleFunc("/save_note/", save_note)
-	mux.HandleFunc("/login/", login_page)
-	mux.HandleFunc("/checkin/", checkin) // действия с авторизацией
-	mux.HandleFunc("/registration/", registration_page)
-	mux.HandleFunc("/register/", register) // действия с регистрацией
-	mux.HandleFunc("/yournotes/", editNote_page)
-	mux.HandleFunc("/edit/", editNote)
-	mux.HandleFunc("/delete/", deleteNote)
-	http.Handle("/", mux)
+	router := mux.NewRouter()
+	router.HandleFunc("/", home_page)
+	router.HandleFunc("/home/", home_page)
+	router.HandleFunc("/newnote/", checkAuth(newnote_page))
+	router.HandleFunc("/save_note/", save_note)
+	router.HandleFunc("/login/", login_page)
+	router.HandleFunc("/checkin/", checkin)
+	router.HandleFunc("/registration/", registration_page)
+	router.HandleFunc("/register/", register)
+	router.HandleFunc("/yournotes/", userNotes_page)
+	router.HandleFunc("/edit/{id:[0-9]+}/", editNote).Methods("POST")
+	router.HandleFunc("/delete/{id:[0-9]+}/", deleteNote)
+	router.HandleFunc("/edit/{id:[0-9]+}/", editNote_page).Methods("GET")
+	http.Handle("/", router)
 	http.ListenAndServe(":5040", nil)
 }
