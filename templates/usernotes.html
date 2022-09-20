@@ -22,9 +22,8 @@
         {{range . }}
           <h4> Your note: {{ .Name }} , will expire in {{ .Ttl }} hours</h4>
           <td><a href="/edit/{{.Id}}/">Edit</a>
-          <form method="POST">
           <td><a href="/delete/{{.Id}}/">Delete</a>
-          </form>
+          <td><a href="/access/{{.Id}}/">Manage access</a>
           </td>
         {{end}}
       </ul>

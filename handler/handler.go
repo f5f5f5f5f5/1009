@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"html/template"
 	"io/ioutil"
-	"knocker/1009/service"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/f5f5f5f5f5/1009/service"
 
 	"github.com/gorilla/mux"
 )
@@ -341,7 +342,6 @@ func editNote_page(w http.ResponseWriter, r *http.Request) {
 			noteToEdit = value
 		}
 	}
-	log.Print(noteToEdit)
 
 	tmpl, err := template.ParseFiles("templates/editnote.html", "templates/top.html", "templates/bot.html")
 	if err != nil {
@@ -349,7 +349,6 @@ func editNote_page(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tmpl.ExecuteTemplate(w, "editnote", noteToEdit)
-
 }
 
 func deleteNote(w http.ResponseWriter, r *http.Request) {
@@ -381,6 +380,51 @@ func deleteNote(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/yournotes/", http.StatusSeeOther)
 }
 
+func access_page(w http.ResponseWriter, r *http.Request) {
+	log.Print("in access_page")
+	vars := mux.Vars(r)
+	strid := vars["Id"]
+
+	id, err := strconv.Atoi(strid)
+
+	if err != nil {
+		log.Print("Failed to convert id to int: editNote_page")
+	}
+
+	var allNotes []service.Note
+
+	const notesFilename = "service/Notes.json"
+
+	rawDataIn, err := ioutil.ReadFile(notesFilename)
+	if err != nil {
+		log.Printf("Cannot load file: %v", err)
+	}
+
+	err = json.Unmarshal(rawDataIn, &allNotes)
+	if err != nil {
+		log.Printf("Failed to unmarshall with error: %v", err)
+	}
+
+	noteToEdit := service.Note{}
+
+	for _, value := range allNotes {
+		if id == value.Id {
+			noteToEdit = value
+		}
+	}
+
+	tmpl, err := template.ParseFiles("templates/access.html", "templates/top.html", "templates/bot.html")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tmpl.ExecuteTemplate(w, "access", noteToEdit)
+}
+
+func accessHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+
 func HandleRequest() {
 	router := mux.NewRouter()
 	router.HandleFunc("/", home_page)
@@ -395,6 +439,8 @@ func HandleRequest() {
 	router.HandleFunc("/edit/{id:[0-9]+}/", editNote).Methods("POST")
 	router.HandleFunc("/delete/{id:[0-9]+}/", deleteNote)
 	router.HandleFunc("/edit/{id:[0-9]+}/", editNote_page).Methods("GET")
+	router.HandleFunc("/access/{id:[0-9]+}/", access_page).Methods("GET")
+	router.HandleFunc("/access/{id:[0-9]+}/", accessHandler).Methods("POST")
 	http.Handle("/", router)
 	http.ListenAndServe(":5040", nil)
 }
