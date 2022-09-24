@@ -1,4 +1,4 @@
-# This is still not done, I`m currently adding some functions
+
 
 ## What is this?
 ##### This is a simplified note service
@@ -60,12 +60,6 @@ func checkAuth(handler func(w http.ResponseWriter, r *http.Request)) func(w http
 Theese functions allow user to edit/delete his own notes. It works with JSON. Finds needed note by note Id, checks is this note belongs to a current user and edit/delete it.
 Im very sorry for my front-end skills, Im really bad at it :)
 
-
-## Work is still in progress on
-
-##### **Deleting note once its time is up**
-
-##### **Notes sorting**
 
 
 
