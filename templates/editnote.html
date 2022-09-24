@@ -15,12 +15,14 @@
     <h2>Edit your note</h2>
     <form method="POST">
         <input type="hidden" name="Id" value="{{.Id}}" />
-        <label>Name</label><br>
+        <label>Note name</label><br>
         <input type="text" name="Name" value="{{.Name}}" /><br><br>
-        <label>Text</label><br>
+        <label>Note text</label><br>
         <input type="text" name="Text" value="{{.Text}}" /><br><br>
-        <label>Ttl</label><br>
+        <label>Note expiration period</label><br>
         <input type="text" name="Ttl" value="{{.Ttl}}" /><br><br>
+        <label>A name of user you want to share this note (or remove his access to current note)</label><br>
+        <input type="text" name="Access" value="" /><br><br>
         <input type="submit" value="Send" />
     </form>
   </main>

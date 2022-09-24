@@ -18,8 +18,6 @@ type Note struct {
 	Ttl    int      `json:"Ttl"`
 }
 
-var id int = 0
-
 const notesFilename = "service/Notes.json"
 
 func NewNote(userid, name, text, ttl string) {
@@ -44,13 +42,11 @@ func NewNote(userid, name, text, ttl string) {
 		log.Printf("Failed to convert time: %v", err)
 	}
 
-	var idPointer *int = &id
-	//it doesnt work
-	*idPointer = *idPointer + 1
+	idNote := noteArray[(len(noteArray) - 1)]
 
 	newnote := Note{
 		UserId: userid,
-		Id:     *idPointer, //add another way setting id; add time of creation to delete when ttl expires
+		Id:     idNote.Id + 1,
 		Name:   name,
 		Text:   text,
 		Access: accessArray,
@@ -107,7 +103,7 @@ func DeleteNote(id int, userid string) {
 
 }
 
-func EditNote(name, text, userid string, id, ttl int) {
+func EditNote(name, text, userid, access string, id, ttl int) {
 	var allNotes []Note
 
 	rawDataIn, err := ioutil.ReadFile(notesFilename)
@@ -128,6 +124,11 @@ func EditNote(name, text, userid string, id, ttl int) {
 				value.Name = name
 				value.Text = text
 				value.Ttl = ttl
+
+				if access != "" {
+					value.Access = accessCheck(access, value.Access)
+				}
+
 				allNotes[i] = value
 				log.Print(allNotes)
 			} else {
@@ -156,9 +157,25 @@ func removeByIndex(array []Note, index int) []Note {
 	return append(array[:index], array[index+1:]...)
 }
 
-// // This filed named notes so I will store my notes here
+func accessCheck(access string, accesses []string) []string {
+	for _, value := range accesses {
+		if value == access {
+			return removeAccess(access, accesses)
+		}
+	}
+	return shareAccess(access, accesses)
+}
 
-// CheckTtl need goroutine scans note date of creation (should be added), compares it to current time and edits ttl, once ttl == 0, deletes note
-// Add new method of setting ID to the note
-// Sort functions to right folders
-// Provide possibility of sorting notes
+func shareAccess(access string, accesses []string) []string {
+	accesses = append(accesses, access)
+	return accesses
+}
+
+func removeAccess(access string, accesses []string) []string {
+	for i, value := range accesses {
+		if access == value {
+			accesses = append(accesses[:i], accesses[i+1:]...)
+		}
+	}
+	return accesses
+}
